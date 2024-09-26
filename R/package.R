@@ -50,7 +50,6 @@ NULL
 #' The copyright notices of the above libraries can be found in the fstcore package.
 #'
 #' @md
-#' @docType package
 #' @name fst-package
 #' @aliases fst-package
-NULL
+"_PACKAGE"

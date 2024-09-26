@@ -23,3 +23,15 @@ Yann Collet and owned by Facebook, Inc.
 As of version 0.9.8, these libraries are included in the fstcore package, on which fst depends.
 The copyright notices of the above libraries can be found in the fstcore package.
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{http://www.fstpackage.org}
+  \item Report bugs at \url{https://github.com/fstpackage/fst/issues}
+}
+
+}
+\author{
+\strong{Maintainer}: Mark Klik \email{markklik@gmail.com} [copyright holder]
+
+}
