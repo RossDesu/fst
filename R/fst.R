@@ -192,9 +192,10 @@ write.fst <- function(x, path, compress = 50, uniform_encoding = TRUE) { # nolin
 #' requires \code{data.table} package to be installed.
 #' @param old_format must be FALSE, the old fst file format is deprecated and can only be read and
 #' converted with fst package versions 0.8.0 to 0.8.10.
+#' @param row.filter only read rows matching the logic in this filter
 #'
 #' @export
-read_fst <- function(path, columns = NULL, from = 1, to = NULL, as.data.table = FALSE, old_format = FALSE) { # nolint
+read_fst <- function(path, columns = NULL, from = 1, to = NULL, as.data.table = FALSE, old_format = FALSE, filter = NULL) { # nolint
   file_name <- normalizePath(path, mustWork = FALSE)
 
   if (!is.null(columns)) {
@@ -224,7 +225,47 @@ read_fst <- function(path, columns = NULL, from = 1, to = NULL, as.data.table = 
     )
   }
 
-  res <- fstretrieve(file_name, columns, from, to)
+     if (!is.null(substitute(filter))){
+          file_cols <- metadata_fst(path)$columnNames
+          filter_args <- all.vars(substitute(filter))
+          filter_cols <- file_cols[file_cols %in% filter_args]
+          filter_res <- read.fst(path = file_name, columns = filter_cols, from = from, to = to, as.data.table = T)
+          filter_res[,ORIGINAL_ROW:=.I]
+          row.indices <- from - 1 + `[`(filter_res,i=eval(substitute(filter)),j='ORIGINAL_ROW')[,ORIGINAL_ROW]
+          rm(filter_res)
+          gc()
+          if(length(row.indices)>1){
+               is.prior.plus.one <- c(FALSE,row.indices[1:(length(row.indices)-1)]+1==(row.indices[2:(length(row.indices))]))
+               max_consecutive <- row.indices[is.prior.plus.one]
+               is.next.minus.one <- c(row.indices[1:(length(row.indices)-1)]==(row.indices[2:(length(row.indices))]-1),FALSE)
+               min_consecutive <- row.indices[is.next.minus.one]
+               not_consecutive <- row.indices[!is.next.minus.one & !is.prior.plus.one]
+               
+               min_consecutive <- sort(c(min_consecutive,not_consecutive))
+               max_consecutive <- sort(c(max_consecutive,not_consecutive))
+               
+               consecutive_ranges<-list(from=min_consecutive,to=max_consecutive)
+          }else{
+               contiguous_index_ranges <- list(from=min(row.indices),to=max(row.indices))
+          }
+          for (index_range in contiguous_index_ranges){
+               
+               res <- NULL
+               resPart <- fstretrieve(file_name, columns, from=index_range$from, to=index_range$to)
+               if (inherits(resPart, "fst_error")) {
+                    stop(resPart)
+               }
+               
+               res <- rbind(res,resPart)
+               rm(resPart)
+               gc()
+          }
+     }else{
+          res <- fstretrieve(file_name, columns, from, to)
+          if (inherits(res, "fst_error")) {
+               stop(res)
+          }
+     }
 
   if (inherits(res, "fst_error")) {
     stop(res)
